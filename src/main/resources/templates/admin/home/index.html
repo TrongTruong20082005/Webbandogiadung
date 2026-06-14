@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Cyber Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/admin-cyber.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="admin-cyber-body">
+<div class="admin-dashboard-shell">
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar-head">
+            <div class="admin-sidebar-brand-text">
+                <div class="admin-brand">CYBER ADMIN</div>
+                <div class="admin-brand-subtitle">Điều khiển hệ thống bán hàng</div>
+            </div>
+
+            <button type="button" class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="Thu gọn menu">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+
+        <nav class="admin-nav">
+            <a class="admin-nav-link active" th:href="@{/admin/home}"><i class="bi bi-speedometer2 admin-nav-icon"></i><span>Dashboard</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/products}"><i class="bi bi-box-seam admin-nav-icon"></i><span>Quản lý sản phẩm</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/genres}"><i class="bi bi-grid-3x3-gap admin-nav-icon"></i><span>Quản lý danh mục</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/brands}"><i class="bi bi-patch-check admin-nav-icon"></i><span>Quản lý thương hiệu</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/accounts}"><i class="bi bi-people admin-nav-icon"></i><span>Quản lý tài khoản</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/inventory-prediction}"><i class="bi bi-graph-up-arrow admin-nav-icon"></i><span>Dự đoán tồn kho</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/orders}"><i class="bi bi-receipt-cutoff admin-nav-icon"></i><span>Quản lý đơn hàng</span></a>
+            <a class="admin-nav-link" th:href="@{/}"><i class="bi bi-house-door admin-nav-icon"></i><span>Về trang chủ</span></a>
+            <form th:action="@{/logout}" method="post" class="admin-logout-form">
+                <input type="hidden"
+                       th:if="${_csrf != null}"
+                       th:name="${_csrf.parameterName}"
+                       th:value="${_csrf.token}">
+
+                <button type="submit" class="admin-nav-link admin-nav-logout">
+                    <i class="bi bi-box-arrow-right admin-nav-icon"></i>
+                    <span>Đăng xuất</span>
+                </button>
+            </form>
+        </nav>
+    </aside>
+
+    <main class="admin-dashboard-main">
+        <section class="dashboard-hero">
+            <div>
+                <div class="dashboard-kicker">FUTURISTIC CONTROL PANEL</div>
+                <h1>Cyber Dashboard</h1>
+                <p>Theo dõi vận hành, doanh thu, tồn kho và trạng thái hệ thống theo thời gian thực từ dữ liệu hiện có.</p>
+            </div>
+
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                <form class="range-filter" method="get" th:action="@{/admin/home}" style="margin: 0;">
+                    <button type="submit" name="range" value="today"
+                            th:classappend="${dashboard.selectedRange == 'today'} ? ' active' : ''">
+                        Hôm nay
+                    </button>
+
+                    <button type="submit" name="range" value="7days"
+                            th:classappend="${dashboard.selectedRange == '7days'} ? ' active' : ''">
+                        7 ngày
+                    </button>
+
+                    <button type="submit" name="range" value="30days"
+                            th:classappend="${dashboard.selectedRange == '30days'} ? ' active' : ''">
+                        30 ngày
+                    </button>
+
+                    <button type="submit" name="range" value="all"
+                            th:classappend="${dashboard.selectedRange == 'all'} ? ' active' : ''">
+                        Toàn bộ
+                    </button>
+                </form>
+                <a class="cyber-button-secondary" th:href="@{/admin/home/export/excel(range=${dashboard.selectedRange})}" style="height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">
+                    <i class="bi bi-file-earmark-excel" style="margin-right: 6px;"></i> Xuất Excel
+                </a>
+            </div>
+        </section>
+
+        <section class="kpi-grid">
+            <article class="kpi-card">
+                <span>Tổng sản phẩm</span>
+                <strong th:text="${dashboard.totalProducts}">0</strong>
+                <small>Hiển thị: <b th:text="${dashboard.activeProducts}">0</b> · Ẩn: <b th:text="${dashboard.hiddenProducts}">0</b></small>
+            </article>
+
+            <article class="kpi-card">
+                <span>Tổng brand</span>
+                <strong th:text="${dashboard.totalBrands}">0</strong>
+            </article>
+
+            <article class="kpi-card">
+                <span>Tổng đơn hàng</span>
+                <strong th:text="${dashboard.totalOrders}">0</strong>
+            </article>
+
+            <article class="kpi-card">
+                <span>Tổng tài khoản</span>
+                <strong th:text="${dashboard.totalAccounts}">0</strong>
+            </article>
+
+            <article class="kpi-card">
+                <span>Tổng doanh thu</span>
+                <strong th:text="${#numbers.formatDecimal(dashboard.totalRevenue, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+            </article>
+
+            <article class="kpi-card">
+                <span>Sắp hết hàng</span>
+                <strong th:text="${dashboard.lowStockProducts}">0</strong>
+            </article>
+        </section>
+
+        <section class="chart-grid" style="margin-top: 24px;">
+            <article class="dashboard-card">
+                <div class="card-header">
+                    <h2>Doanh thu theo ngày</h2>
+                    <span>Range: <span th:text="${dashboard.selectedRangeLabel}">7 ngày gần nhất</span></span>
+                </div>
+                <canvas id="revenueChart"></canvas>
+            </article>
+
+            <article class="dashboard-card">
+                <div class="card-header">
+                    <h2>Số đơn hàng theo ngày</h2>
+                    <span>Range: <span th:text="${dashboard.selectedRangeLabel}">7 ngày gần nhất</span></span>
+                </div>
+                <canvas id="ordersChart"></canvas>
+            </article>
+        </section>
+
+        <section class="dashboard-card forecast-model-section" style="margin-top: 24px;">
+            <div class="card-header forecast-model-header">
+                <div>
+                    <div class="dashboard-kicker">DỰ BÁO DOANH THU LSTM</div>
+                    <h2>3 khoảng dự báo doanh thu</h2>
+                </div>
+                <span>ONNX · Java 25</span>
+            </div>
+
+            <div class="forecast-model-grid">
+                <article class="forecast-model-card forecast-model-short">
+                    <div class="forecast-model-icon"><i class="bi bi-calendar-week"></i></div>
+                    <div>
+                        <span>Ngắn hạn</span>
+                        <h3>Dự báo 7 ngày tới</h3>
+                        <strong th:text="${#numbers.formatDecimal(forecast7Days, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                        <small>Tổng doanh thu dự báo trong 7 ngày</small>
+                    </div>
+                </article>
+
+                <article class="forecast-model-card forecast-model-medium">
+                    <div class="forecast-model-icon"><i class="bi bi-calendar3"></i></div>
+                    <div>
+                        <span>Trung hạn</span>
+                        <h3>Dự báo 30 ngày tới</h3>
+                        <strong th:text="${#numbers.formatDecimal(forecast30Days, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                        <small>Tổng doanh thu dự báo trong 30 ngày</small>
+                    </div>
+                </article>
+
+                <article class="forecast-model-card forecast-model-long">
+                    <div class="forecast-model-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                    <div>
+                        <span>Dài hạn</span>
+                        <h3>Dự báo 6 tháng tới</h3>
+                        <strong th:text="${#numbers.formatDecimal(forecast6Months, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                        <small>Tổng doanh thu dự báo trong 180 ngày</small>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="dashboard-card forecast-switch-section" style="margin-top: 24px;">
+            <div class="forecast-switch-header">
+                <div>
+                    <div class="dashboard-kicker">DỰ BÁO DOANH THU</div>
+                    <h2>Dự báo doanh thu</h2>
+                    <p>Biểu đồ hiển thị doanh thu thực tế gần nhất ở bên trái và doanh thu dự báo LSTM ở bên phải. Có thể chuyển nhanh giữa 7 ngày, 30 ngày / 1 tháng và 6 tháng.</p>
+                </div>
+
+                <div class="forecast-range-tabs" aria-label="Chọn khoảng dự báo">
+                    <button type="button" class="forecast-range-tab active" data-forecast-view="7days">7 ngày</button>
+                    <button type="button" class="forecast-range-tab" data-forecast-view="30days">30 ngày / 1 tháng</button>
+                    <button type="button" class="forecast-range-tab" data-forecast-view="6months">6 tháng</button>
+                </div>
+            </div>
+
+            <div class="forecast-switch-canvas">
+                <canvas id="forecastSwitchChart"></canvas>
+            </div>
+        </section>
+
+        <section class="dashboard-card admin-feature-card" style="margin-top: 24px;">
+            <div>
+                <div class="dashboard-kicker">ADMIN INVENTORY AI</div>
+                <h2>Dự đoán tồn kho & gợi ý nhập hàng</h2>
+                <p>Chức năng quản trị giúp admin theo dõi sản phẩm sắp hết, dự đoán nhu cầu 30 ngày tới và đề xuất số lượng cần nhập thêm.</p>
+            </div>
+
+            <a class="admin-primary-action" th:href="@{/admin/inventory-prediction}">
+                Mở dashboard dự đoán tồn kho
+            </a>
+        </section>
+
+
+
+        <section class="dashboard-card quick-actions-card">
+            <div class="card-header">
+                <h2>Quick actions</h2>
+            </div>
+
+            <div class="quick-actions-grid">
+                <a th:href="@{/admin/products}">Quản lý sản phẩm</a>
+                <a th:href="@{/admin/products/create}">Thêm sản phẩm mới</a>
+                <a th:href="@{/admin/brands}">Quản lý brand</a>
+                <a th:href="@{/admin/orders}">Quản lý đơn hàng</a>
+                <a th:href="@{/admin/inventory-prediction}">Dự đoán tồn kho</a>
+                <a th:href="@{/admin/accounts}">Quản lý tài khoản</a>
+            </div>
+        </section>
+
+        <section class="lists-grid">
+            <article class="dashboard-card">
+                <div class="card-header">
+                    <h2>Đơn hàng mới nhất</h2>
+                </div>
+
+                <div class="list-table" th:if="${!#lists.isEmpty(dashboard.recentOrders)}">
+                    <div class="list-row" th:each="item : ${dashboard.recentOrders}">
+                        <div>
+                            <strong th:text="'Đơn #' + ${item.orderId}">Đơn #1</strong>
+                            <span th:text="${item.customerName}">Khách hàng</span>
+                        </div>
+
+                        <div>
+                            <strong th:text="${#numbers.formatDecimal(item.total, 0, 'COMMA', 0, 'POINT')} + ' đ'">0 đ</strong>
+                            <span th:text="${item.orderDate}">04/05/2026</span>
+                        </div>
+
+                        <div>
+                            <span class="status-pill" th:text="${item.statusLabel}">Đã thanh toán</span>
+                            <span th:text="${item.paymentName}">MOMO</span>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="empty-text" th:if="${#lists.isEmpty(dashboard.recentOrders)}">
+                    Chưa có dữ liệu đơn hàng.
+                </p>
+            </article>
+
+            <article class="dashboard-card">
+                <div class="card-header">
+                    <h2>Sản phẩm tồn kho thấp</h2>
+                </div>
+
+                <div class="list-table" th:if="${!#lists.isEmpty(dashboard.lowStockItems)}">
+                    <div class="list-row" th:each="item : ${dashboard.lowStockItems}">
+                        <div>
+                            <strong th:text="${item.productName}">Sản phẩm</strong>
+                            <span th:text="${item.brandName}">Brand</span>
+                        </div>
+
+                        <div>
+                            <strong th:text="${item.quantity}">0</strong>
+                            <span>Tồn kho</span>
+                        </div>
+
+                        <div>
+                            <span class="status-pill warning" th:text="${item.statusLabel}">Đang bán</span>
+                            <a th:href="@{'/admin/products/edit/' + ${item.productId}}">Sửa</a>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="empty-text" th:if="${#lists.isEmpty(dashboard.lowStockItems)}">
+                    Không có sản phẩm nào sắp hết hàng.
+                </p>
+            </article>
+
+            <article class="dashboard-card">
+                <div class="card-header">
+                    <h2>Tài khoản mới nhất</h2>
+                </div>
+
+                <div class="list-table" th:if="${!#lists.isEmpty(dashboard.recentAccounts)}">
+                    <div class="list-row" th:each="item : ${dashboard.recentAccounts}">
+                        <div>
+                            <strong th:text="${item.name}">Tên tài khoản</strong>
+                            <span th:text="${item.email}">email@example.com</span>
+                        </div>
+
+                        <div>
+                            <strong th:text="${item.createdAt}">04/05/2026</strong>
+                            <span>Thời điểm tạo</span>
+                        </div>
+
+                        <div>
+                            <span class="status-pill success" th:text="${item.statusLabel}">Hoạt động</span>
+                            <a th:href="@{'/admin/accounts/' + ${item.accountId}}">Xem</a>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="empty-text" th:if="${#lists.isEmpty(dashboard.recentAccounts)}">
+                    Chưa có dữ liệu tài khoản.
+                </p>
+            </article>
+        </section>
+    </main>
+</div>
+
+<script th:inline="javascript">
+    const chartLabels = /*[[${dashboard.chartLabels}]]*/ [];
+    const revenueSeries = /*[[${dashboard.revenueSeries}]]*/ [];
+    const orderSeries = /*[[${dashboard.orderSeries}]]*/ [];
+
+    const forecast7ChartLabels = /*[[${forecast7ChartLabels}]]*/ [];
+    const forecast7ChartValues = /*[[${forecast7ChartValues}]]*/ [];
+    const forecast7ActualValues = /*[[${forecast7ActualValues}]]*/ [];
+
+    const forecast30ChartLabels = /*[[${forecast30ChartLabels}]]*/ [];
+    const forecast30ChartValues = /*[[${forecast30ChartValues}]]*/ [];
+    const forecast30ActualValues = /*[[${forecast30ActualValues}]]*/ [];
+
+    const forecast6MonthChartLabels = /*[[${forecast6MonthChartLabels}]]*/ [];
+    const forecast6MonthChartValues = /*[[${forecast6MonthChartValues}]]*/ [];
+    const forecast6MonthActualValues = /*[[${forecast6MonthActualValues}]]*/ [];
+
+    const baseOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                labels: {
+                    color: '#dbeafe'
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let value = context.raw;
+
+                        if (value === null || value === undefined) {
+                            return context.dataset.label + ': -';
+                        }
+
+                        if (typeof value === 'number') {
+                            return context.dataset.label + ': ' + value.toLocaleString('vi-VN') + ' đ';
+                        }
+
+                        return context.dataset.label + ': ' + value;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: '#94a3b8' },
+                grid: { color: 'rgba(148, 163, 184, 0.08)' }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    color: '#94a3b8',
+                    callback: function(value) {
+                        if (typeof value === 'number') {
+                            return value.toLocaleString('vi-VN');
+                        }
+
+                        return value;
+                    }
+                },
+                grid: { color: 'rgba(148, 163, 184, 0.08)' }
+            }
+        }
+    };
+
+    const forecastViewData = {
+        '7days': {
+            labels: forecast7ChartLabels,
+            actual: forecast7ActualValues,
+            forecast: forecast7ChartValues,
+            actualLabel: 'Doanh thu thực tế gần nhất',
+            forecastLabel: 'Doanh thu dự báo 7 ngày'
+        },
+        '30days': {
+            labels: forecast30ChartLabels,
+            actual: forecast30ActualValues,
+            forecast: forecast30ChartValues,
+            actualLabel: 'Doanh thu thực tế gần nhất',
+            forecastLabel: 'Doanh thu dự báo 30 ngày / 1 tháng'
+        },
+        '6months': {
+            labels: forecast6MonthChartLabels,
+            actual: forecast6MonthActualValues,
+            forecast: forecast6MonthChartValues,
+            actualLabel: 'Doanh thu thực tế theo tháng',
+            forecastLabel: 'Doanh thu dự báo 6 tháng'
+        }
+    };
+
+    let forecastSwitchChartInstance = null;
+
+    function renderForecastSwitchChart(viewKey) {
+        const element = document.getElementById('forecastSwitchChart');
+        const selectedData = forecastViewData[viewKey] || forecastViewData['7days'];
+
+        if (!element) {
+            return;
+        }
+
+        if (forecastSwitchChartInstance) {
+            forecastSwitchChartInstance.destroy();
+        }
+
+        forecastSwitchChartInstance = new Chart(element, {
+            type: 'line',
+            data: {
+                labels: selectedData.labels,
+                datasets: [
+                    {
+                        label: selectedData.actualLabel,
+                        data: selectedData.actual,
+                        borderColor: '#22C55E',
+                        backgroundColor: 'rgba(34, 197, 94, 0.14)',
+                        fill: false,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        borderWidth: 2,
+                        spanGaps: false
+                    },
+                    {
+                        label: selectedData.forecastLabel,
+                        data: selectedData.forecast,
+                        borderColor: '#F97316',
+                        backgroundColor: 'rgba(249, 115, 22, 0.14)',
+                        borderDash: [6, 6],
+                        fill: false,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        borderWidth: 2,
+                        spanGaps: false
+                    }
+                ]
+            },
+            options: baseOptions
+        });
+    }
+
+    document.querySelectorAll('.forecast-range-tab').forEach(button => {
+        button.addEventListener('click', function () {
+            document.querySelectorAll('.forecast-range-tab').forEach(item => item.classList.remove('active'));
+            this.classList.add('active');
+            renderForecastSwitchChart(this.dataset.forecastView);
+        });
+    });
+
+    renderForecastSwitchChart('7days');
+
+    const revenueChartElement = document.getElementById('revenueChart');
+
+    if (revenueChartElement) {
+        new Chart(revenueChartElement, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Doanh thu',
+                    data: revenueSeries,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.18)',
+                    fill: true,
+                    tension: 0.35
+                }]
+            },
+            options: baseOptions
+        });
+    }
+
+    const ordersChartElement = document.getElementById('ordersChart');
+
+    if (ordersChartElement) {
+        new Chart(ordersChartElement, {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Đơn hàng',
+                    data: orderSeries,
+                    backgroundColor: 'rgba(139, 92, 246, 0.75)',
+                    borderRadius: 10
+                }]
+            },
+            options: baseOptions
+        });
+    }
+
+</script>
+<script th:src="@{/js/sidebar.js}"></script>
+</body>
+</html>

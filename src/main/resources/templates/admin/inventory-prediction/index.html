@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dự đoán tồn kho</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" th:href="@{/css/admin-cyber.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="admin-cyber-body">
+<div class="admin-dashboard-shell">
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar-head">
+            <div class="admin-sidebar-brand-text">
+                <div class="admin-brand">CYBER ADMIN</div>
+                <div class="admin-brand-subtitle">Điều khiển hệ thống bán hàng</div>
+            </div>
+
+            <button type="button" class="admin-sidebar-toggle" id="adminSidebarToggle" aria-label="Thu gọn menu">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+
+        <nav class="admin-nav">
+            <a class="admin-nav-link" th:href="@{/admin/home}"><i class="bi bi-speedometer2 admin-nav-icon"></i><span>Dashboard</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/products}"><i class="bi bi-box-seam admin-nav-icon"></i><span>Quản lý sản phẩm</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/genres}"><i class="bi bi-grid-3x3-gap admin-nav-icon"></i><span>Quản lý danh mục</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/brands}"><i class="bi bi-patch-check admin-nav-icon"></i><span>Quản lý thương hiệu</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/accounts}"><i class="bi bi-people admin-nav-icon"></i><span>Quản lý tài khoản</span></a>
+            <a class="admin-nav-link active" th:href="@{/admin/inventory-prediction}"><i class="bi bi-graph-up-arrow admin-nav-icon"></i><span>Dự đoán tồn kho</span></a>
+            <a class="admin-nav-link" th:href="@{/admin/orders}"><i class="bi bi-receipt-cutoff admin-nav-icon"></i><span>Quản lý đơn hàng</span></a>
+            <a class="admin-nav-link" th:href="@{/}"><i class="bi bi-house-door admin-nav-icon"></i><span>Về trang chủ</span></a>
+            <form th:action="@{/logout}" method="post" class="admin-logout-form">
+                <input type="hidden"
+                       th:if="${_csrf != null}"
+                       th:name="${_csrf.parameterName}"
+                       th:value="${_csrf.token}">
+
+                <button type="submit" class="admin-nav-link admin-nav-logout">
+                    <i class="bi bi-box-arrow-right admin-nav-icon"></i>
+                    <span>Đăng xuất</span>
+                </button>
+            </form>
+        </nav>
+    </aside>
+
+    <main class="admin-dashboard-main">
+        <section class="dashboard-hero inventory-dashboard-hero">
+            <div>
+                <div class="dashboard-kicker">INVENTORY PREDICTION</div>
+                <h1>Dự đoán tồn kho & gợi ý nhập hàng</h1>
+                <p>Dashboard chỉ dành cho admin, dùng lượng bán 30 ngày gần nhất và tồn kho hiện tại để cảnh báo sản phẩm sắp hết, dự đoán nhu cầu và đề xuất số lượng cần nhập.</p>
+            </div>
+
+            <div class="inventory-hero-actions">
+                <a class="admin-primary-action" th:href="@{/admin/home}">← Về dashboard</a>
+                <a class="admin-secondary-action" th:href="@{/admin/products}">Quản lý sản phẩm</a>
+            </div>
+        </section>
+
+        <section class="inventory-overview-grid spacious-stats-grid">
+            <article class="kpi-card inventory-stat-card">
+                <span>Tổng sản phẩm</span>
+                <strong th:text="${totalProducts}">0</strong>
+                <small>Tất cả sản phẩm trong hệ thống</small>
+            </article>
+
+            <article class="kpi-card inventory-stat-card success-glow">
+                <span>Đang hiển thị</span>
+                <strong th:text="${activeProducts}">0</strong>
+                <small>Sản phẩm khách hàng đang thấy</small>
+            </article>
+
+            <article class="kpi-card inventory-stat-card muted-glow">
+                <span>Đang ẩn</span>
+                <strong th:text="${hiddenProducts}">0</strong>
+                <small>Sản phẩm không hiển thị</small>
+            </article>
+
+            <article class="kpi-card inventory-stat-card danger-glow">
+                <span>Cần nhập gấp</span>
+                <strong th:text="${urgentCount}">0</strong>
+                <small>Tồn kho rất thấp hoặc đã hết</small>
+            </article>
+
+            <article class="kpi-card inventory-stat-card warning-glow">
+                <span>Sắp hết / nguy cơ thiếu</span>
+                <strong th:text="${lowStockCount}">0</strong>
+                <small>Cần admin theo dõi</small>
+            </article>
+
+            <article class="kpi-card inventory-stat-card">
+                <span>Sản phẩm cần nhập thêm</span>
+                <strong th:text="${needImportCount}">0</strong>
+                <small>Có số lượng gợi ý nhập</small>
+            </article>
+
+            <article class="kpi-card inventory-stat-card success-glow">
+                <span>Tồn kho ổn định</span>
+                <strong th:text="${stableCount}">0</strong>
+                <small>Đủ hàng theo dữ liệu bán</small>
+            </article>
+
+            <article class="kpi-card inventory-stat-card">
+                <span>Tổng số lượng gợi ý nhập</span>
+                <strong th:text="${totalSuggestedImport}">0</strong>
+                <small>Tổng số lượng nên bổ sung</small>
+            </article>
+        </section>
+
+        <section class="dashboard-card inventory-attention-card">
+            <div class="card-header">
+                <div>
+                    <h2>Danh sách sản phẩm cần chú ý</h2>
+                    <span>Tập trung vào sản phẩm sắp hết hàng hoặc có đề xuất nhập thêm.</span>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(inventoryPredictions)}" class="empty-state">
+                Chưa có sản phẩm nào cần chú ý.
+            </div>
+
+            <div th:unless="${#lists.isEmpty(inventoryPredictions)}" class="inventory-attention-grid">
+                <article class="inventory-product-card" th:each="item : ${inventoryPredictions}">
+                    <div class="inventory-product-head">
+                        <div>
+                            <h3 th:text="${item.productName}">Tên sản phẩm</h3>
+                            <p>
+                                Mã SP:
+                                <strong th:text="${item.productId}">0</strong>
+                            </p>
+                        </div>
+
+                        <span class="inventory-status-pill"
+                              th:classappend="${item.warningLevel == 'Sắp hết hàng' || item.warningLevel == 'Cần nhập gấp'} ? ' warning' : ' success'"
+                              th:text="${item.warningLevel}">
+                                    Sắp hết hàng
+                        </span>
+                    </div>
+
+                    <div class="inventory-metric-grid">
+                        <div class="inventory-metric">
+                            <span>Tồn kho</span>
+                            <strong th:text="${item.currentStock}">0</strong>
+                        </div>
+
+                        <div class="inventory-metric">
+                            <span>Đã bán 30 ngày</span>
+                            <strong th:text="${item.soldLast30Days}">0</strong>
+                        </div>
+
+                        <div class="inventory-metric">
+                            <span>TB/ngày</span>
+                            <strong th:text="${item.averageDailySales}">0</strong>
+                        </div>
+
+                        <div class="inventory-metric">
+                            <span>Dự đoán 30 ngày</span>
+                            <strong th:text="${item.predictedDemandNext30Days}">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="inventory-card-bottom">
+                        <div>
+                            <span class="inventory-label">Gợi ý nhập</span>
+                            <strong class="inventory-suggest-number" th:text="${item.suggestedImportQuantity}">0</strong>
+                        </div>
+
+                        <a class="inventory-action-link"
+                           th:href="@{/admin/products/edit/{id}(id=${item.productId})}">
+                            Nhập/Sửa
+                        </a>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="chart-grid inventory-charts">
+            <article class="dashboard-card">
+                <div class="card-header">
+                    <div>
+                        <h2>So sánh tồn kho và nhu cầu dự đoán</h2>
+                        <span>Top sản phẩm cần admin theo dõi.</span>
+                    </div>
+                </div>
+
+                <canvas id="inventoryPredictionChart"></canvas>
+            </article>
+
+            <article class="dashboard-card">
+                <div class="card-header">
+                    <div>
+                        <h2>Dự báo doanh thu theo tháng</h2>
+                        <span>Chỉ tính từ các đơn hàng đã hoàn thành.</span>
+                    </div>
+                </div>
+
+                <canvas id="adminRevenueForecastChart"></canvas>
+            </article>
+        </section>
+
+        <section class="dashboard-card inventory-note">
+            <div class="card-header">
+                <h2>Cách hệ thống tính gợi ý nhập</h2>
+            </div>
+
+            <p>Hệ thống lấy số lượng đã bán từ các đơn hàng hoàn thành trong 30 ngày gần nhất làm nhu cầu dự kiến cho 30 ngày tới, cộng thêm tồn kho an toàn khoảng 20%, sau đó trừ đi tồn kho hiện tại để ra số lượng gợi ý nhập thêm.</p>
+            <p>Trạng thái được ưu tiên theo mức độ: <strong>Cần nhập gấp</strong>, <strong>Sắp hết hàng</strong>, <strong>Nên nhập thêm</strong>, <strong>Có nguy cơ thiếu hàng</strong>, sau đó mới đến <strong>Ổn định</strong>.</p>
+        </section>
+    </main>
+</div>
+
+<script th:inline="javascript">
+    const inventoryDataRaw = /*[[${inventoryPredictions}]]*/ [];
+    const inventoryData = Array.isArray(inventoryDataRaw) ? inventoryDataRaw : [];
+
+    const inventoryLabels = inventoryData.map(item => item.productName);
+    const currentStock = inventoryData.map(item => item.currentStock);
+    const predictedDemand = inventoryData.map(item => item.predictedDemandNext30Days);
+    const suggestedImport = inventoryData.map(item => item.suggestedImportQuantity);
+
+    const forecastDataRaw = /*[[${forecastData}]]*/ [];
+    const forecastData = Array.isArray(forecastDataRaw) ? forecastDataRaw : [];
+
+    const forecastLabels = forecastData.map(item => item.month);
+    const actualRevenue = forecastData.map(item => item.actualRevenue);
+    const forecastRevenue = forecastData.map(item => item.forecastRevenue);
+
+    const baseOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { labels: { color: '#dbeafe' } },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let value = context.raw;
+
+                        if (value === null || value === undefined) {
+                            return context.dataset.label + ': -';
+                        }
+
+                        if (typeof value === 'number') {
+                            return context.dataset.label + ': ' + value.toLocaleString('vi-VN');
+                        }
+
+                        return context.dataset.label + ': ' + value;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: { color: '#94a3b8' },
+                grid: { color: 'rgba(148, 163, 184, 0.08)' }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: { color: '#94a3b8' },
+                grid: { color: 'rgba(148, 163, 184, 0.08)' }
+            }
+        }
+    };
+
+    const inventoryChart = document.getElementById('inventoryPredictionChart');
+
+    if (inventoryChart) {
+        new Chart(inventoryChart, {
+            type: 'bar',
+            data: {
+                labels: inventoryLabels,
+                datasets: [
+                    {
+                        label: 'Tồn kho hiện tại',
+                        data: currentStock,
+                        backgroundColor: 'rgba(59, 130, 246, 0.72)',
+                        borderRadius: 10
+                    },
+                    {
+                        label: 'Nhu cầu dự đoán 30 ngày',
+                        data: predictedDemand,
+                        backgroundColor: 'rgba(245, 158, 11, 0.72)',
+                        borderRadius: 10
+                    },
+                    {
+                        label: 'Gợi ý nhập thêm',
+                        data: suggestedImport,
+                        backgroundColor: 'rgba(239, 68, 68, 0.72)',
+                        borderRadius: 10
+                    }
+                ]
+            },
+            options: baseOptions
+        });
+    }
+
+    const adminForecastChart = document.getElementById('adminRevenueForecastChart');
+
+    if (adminForecastChart) {
+        new Chart(adminForecastChart, {
+            type: 'line',
+            data: {
+                labels: forecastLabels,
+                datasets: [
+                    {
+                        label: 'Doanh thu thực tế',
+                        data: actualRevenue,
+                        borderColor: '#22C55E',
+                        backgroundColor: 'rgba(34, 197, 94, 0.16)',
+                        fill: true,
+                        tension: 0.35
+                    },
+                    {
+                        label: 'Doanh thu dự báo',
+                        data: forecastRevenue,
+                        borderColor: '#F97316',
+                        backgroundColor: 'rgba(249, 115, 22, 0.12)',
+                        borderDash: [6, 6],
+                        fill: true,
+                        tension: 0.35
+                    }
+                ]
+            },
+            options: baseOptions
+        });
+    }
+</script>
+<script th:src="@{/js/sidebar.js}"></script>
+</body>
+</html>
